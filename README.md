@@ -1,6 +1,6 @@
 # VPN and NonVPN Traffic Classification
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/SAS2005/VPN-NonVPN-Classification-project/blob/main/TAM400_VPN_Notebook_Ready.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1YyvYGFFRzNyneBJbhtM6DHIiM0HL6wOe?usp=sharing#scrollTo=vpn-33)
 
 This TAM400 project investigates whether machine learning can distinguish VPN and NonVPN network flows using nine numerical traffic measurements. We compare a simple reference model with SGDClassifier and Random Forest, then evaluate the selected model.
 
@@ -8,13 +8,15 @@ All data preparation, training, model comparisons, tables, graphs and final resu
 
 ## Run in Google Colab
 
-1. Click **Open in Colab** above.
+1. Click **Open in Colab** above to open the original project notebook shared by the authors.
 2. Use a normal Python CPU runtime. A GPU is not required.
 3. Run the cells from top to bottom, or select **Runtime > Run all**.
 4. Review the plots and tables below each cell. Section 15 prints the final results from that run.
 5. Save a copy to your Google Drive if you want to keep your changes and new outputs.
 
 The notebook downloads the raw feature file automatically. Internet access is needed for that download and for installing any missing libraries. No Google Drive mount, separate notebook, saved model or external results file is required.
+
+The notebook in this repository contains the cells and saved outputs copied from the linked Google Colab project. The Drive notebook and this repository copy do not sync automatically.
 
 You can also download [TAM400_VPN_Notebook_Ready.ipynb](TAM400_VPN_Notebook_Ready.ipynb) and upload it to Colab. GitHub displays the code and saved outputs without running the experiment.
 
@@ -105,7 +107,7 @@ There are **189 false VPN alarms** and **143 missed VPN flows**, giving 332 erro
 
 ## Reproducibility and limitations
 
-The saved environment output reports Python 3.13.15, scikit-learn 1.6.1, pandas 2.2.3 and NumPy 2.1.3. The notebook also uses matplotlib. Its first cell prints the environment versions and installs missing libraries. It does not pin all package versions, so a different Colab environment may produce slightly different results even with a fixed random seed.
+The saved environment output reports Python 3.13.16, scikit-learn 1.6.1, pandas 2.2.3 and NumPy 2.1.3. The notebook also uses matplotlib. Its first cell prints the environment versions and installs missing libraries. It does not pin all package versions, so a different Colab environment may produce slightly different results even with a fixed random seed.
 
 - Training accuracy is 99.993%, about 9.23 percentage points above test accuracy. This indicates overfitting.
 - The test partition was examined in earlier project versions. It is a development test, not a new independent evaluation.
@@ -117,4 +119,4 @@ This is an offline classification experiment. It requires the nine measured feat
 
 ## AI acknowledgment
 
-OpenAI Codex supported explanations, data-source research, code generation and debugging, local execution of an earlier project version, figures and drafting. The students are responsible for reviewing the work and understanding the submitted methods and results. Student names, group details and individual contribution fields in the notebook should be completed with the actual information before submission.
+OpenAI Codex supported explanations, data-source research, code generation and debugging, local execution of an earlier project version, figures and drafting. The students are responsible for reviewing the work and understanding the submitted methods and results. Any remaining individual contribution fields in the notebook should be completed with the actual information before submission.
