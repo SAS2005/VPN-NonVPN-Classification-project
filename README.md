@@ -1,122 +1,59 @@
 # VPN and NonVPN Traffic Classification
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1YyvYGFFRzNyneBJbhtM6DHIiM0HL6wOe?usp=sharing#scrollTo=vpn-33)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/SAS2005/VPN-NonVPN-Classification-project/blob/main/TAM400_VPN_Notebook_Ready.ipynb)
 
-This TAM400 project investigates whether machine learning can distinguish VPN and NonVPN network flows using nine numerical traffic measurements. We compare a simple reference model with SGDClassifier and Random Forest, then evaluate the selected model.
+This TAM400 project classifies VPN and NonVPN network flows using nine numerical measurements. The revised notebook contains all data preparation, training, tuning, graphs and final results in one place. All saved results come from the same completed local run.
 
-All data preparation, training, model comparisons, tables, graphs and final results are contained in **one notebook**. Random Forest achieved **90.77% test accuracy** and a **VPN F1-score of 0.9120** in the saved results.
+## Run the complete project
 
-## Run in Google Colab
+1. Click **Open in Colab** above.
+2. Use a normal CPU runtime and choose **Runtime > Run all**.
+3. Review every table and graph beneath its code cell. Section 15 prints the final comparison.
+4. Save a copy to Google Drive to keep any changes you make.
 
-1. Click **Open in Colab** above to open the original project notebook shared by the authors.
-2. Use a normal Python CPU runtime. A GPU is not required.
-3. Run the cells from top to bottom, or select **Runtime > Run all**.
-4. Review the plots and tables below each cell. Section 15 prints the final results from that run.
-5. Save a copy to your Google Drive if you want to keep your changes and new outputs.
+The Colab button opens this revised GitHub notebook. The earlier Drive notebook does not sync automatically and still contains its separate copy.
 
-The notebook downloads the raw feature file automatically. Internet access is needed for that download and for installing any missing libraries. No Google Drive mount, separate notebook, saved model or external results file is required.
+The notebook downloads only the raw feature file. All training, search, prediction and results are computed in this one notebook. Saved outputs are included. No saved model or separate results file needs to be imported. The 64-setting, three-fold search requires 192 CV fits. Runtime depends on the machine.
 
-The notebook in this repository contains the cells and saved outputs copied from the linked Google Colab project. The Drive notebook and this repository copy do not sync automatically.
+## Final model comparison
 
-You can also download [TAM400_VPN_Notebook_Ready.ipynb](TAM400_VPN_Notebook_Ready.ipynb) and upload it to Colab. GitHub displays the code and saved outputs without running the experiment.
-
-## Dataset and sources
-
-The project uses a public copy of the **ISCXVPN2016** feature file for a **15-second flow timeout**. The original dataset is described by the Canadian Institute for Cybersecurity at the University of New Brunswick, Canada.
-
-- [Official dataset description](https://www.unb.ca/cic/datasets/vpn.html)
-- [Research paper: Characterization of Encrypted and VPN Traffic using Time-related Features](https://doi.org/10.5220/0005740704070414), G. Draper-Gil et al., ICISSP 2016, pp. 407–414.
-- [Exact version-pinned feature-file copy used by the notebook](https://github.com/shafwanur/thd-ss25-ml-project/blob/b4488cf1022157a319d9ccdfa36f86cb940e2b80/data/15s.arff)
-
-The code checks the downloaded file against this SHA-256 checksum:
-
-```text
-8b12e8c0cd49f56af28cdaa7c2aa7795ee24de0b1bedf638280e00404f7c1563
-```
-
-The checksum confirms the expected copy is used. This public copy has not been independently compared with the university archive. The official download route requires registration. The 15-second value describes the flow timeout, not the total capture duration. The dataset itself is downloaded at runtime and is not stored in this repository.
-
-## Inputs and preparation
-
-Each row represents a network flow. The target is **NonVPN = 0** or **VPN = 1**, derived from the original application label. That label is excluded from the inputs.
-
-The nine input features are:
-
-```text
-duration, flowPktsPerSecond, flowBytesPerSecond,
-min_flowiat, max_flowiat, mean_flowiat, std_flowiat,
-mean_active, mean_idle
-```
-
-| Data step | Count |
-|---|---:|
-| Original flows | 18,758 |
-| Invalid negative values replaced with missing values | 1,240 cells |
-| Duplicate or conflicting rows removed | 779 |
-| Cleaned flows | 17,979 |
-| Training flows | 14,383 |
-| Test flows | 3,596 |
-
-We use a stratified 80/20 split with `random_state=42`. Missing values are replaced with medians learned inside each training pipeline. SGDClassifier also uses StandardScaler. Preprocessing is fitted separately within each cross-validation training fold.
-
-The exploratory section contains training-class counts, a flow-duration histogram and a Pearson correlation table. All nine inputs are retained.
-
-## Model comparison
-
-We compare models using three-fold stratified cross-validation on the training set and select using mean VPN F1-score.
-
-| Model | Mean validation VPN F1 |
-|---|---:|
-| Random Forest | 0.8935 |
-| DummyClassifier reference | 0.6828 |
-| SGDClassifier | 0.6003 |
-
-The reference model always predicts the most common training class, VPN. Random Forest combines 100 trees with the default settings and a fixed random seed. SGDClassifier learns a linear decision boundary in this setup and scored below the reference model.
-
-GridSearchCV tests Random Forest `max_features` values of 4, 6 and 8:
-
-| Setting | Mean validation VPN F1 | Fold standard deviation |
+| Metric | Default RF | Tuned RF |
 |---|---:|---:|
-| Default (`sqrt`) | 0.8935 | 0.0040 |
-| 4 | 0.8932 | 0.0044 |
-| 6 | 0.8932 | 0.0039 |
-| 8 | 0.8917 | 0.0016 |
+| Training accuracy | 99.99% | 97.75% |
+| Mean CV VPN F1 | 0.8946 | 0.8930 |
+| CV F1 standard deviation | 0.0062 | 0.0037 |
+| Mean CV training VPN F1 | 1.0000 | 0.9774 |
+| Training–validation F1 gap | 0.1054 | 0.0844 |
+| Test accuracy | 90.66% | 90.41% |
+| VPN precision | 90.08% | 89.25% |
+| VPN recall | 92.11% | 92.65% |
+| VPN F1 | 0.9109 | 0.9092 |
+| ROC-AUC | 0.9677 | 0.9677 |
+| Training–test accuracy gap | 9.34 points | 7.35 points |
 
-The notebook identifies 6 as the best grid candidate using unrounded scores. Settings 4 and 6 both round to 0.8932. None improves on the original Random Forest, so the default forest is retained. These small differences do not establish a reliable advantage on new traffic.
+The final choice is **Tuned RF**: `max_depth=20`, `min_samples_split=10`, `min_samples_leaf=1`, `max_features="sqrt"`, with 100 trees. The changed controls are maximum depth (unlimited to 20) and minimum split size (2 to 10).
 
-## Saved test results
+The highest mean CV F1 was 0.8949. Its fold standard deviation divided by the square root of three gave an allowance of 0.0027. This made the eligibility threshold 0.8922. Among 9 eligible settings, the selected model had the smallest fold-training/validation F1 gap. Higher mean CV F1 and then grid order break ties. This is a practical selection heuristic, not a test of statistical equivalence.
 
-The following values come from the outputs saved in the uploaded notebook. Running the notebook again recomputes them.
+The selected model gives up 0.0015 mean validation F1 relative to the default forest. Its training–validation F1 gap decreases from 0.1054 to 0.0844. This supports reduced overfitting in this experiment, but a substantial gap remains. The test scores did not select the parameters.
 
-| Metric | Random Forest | Reference model |
-|---|---:|---:|
-| Accuracy | 90.77% | 51.84% |
-| VPN precision | 90.10% | 51.84% |
-| VPN recall | 92.33% | 100.00% |
-| VPN F1-score | 0.9120 | 0.6828 |
-| ROC-AUC | 0.9678 | 0.5000 |
+## Notebook and revisions
 
-The confusion matrix has actual classes in rows and predicted classes in columns:
+- [Complete executed notebook](TAM400_VPN_Notebook_Ready.ipynb)
+- [Detailed revision guide](CHANGES.md)
 
-| Actual / predicted | NonVPN | VPN |
-|---|---:|---:|
-| NonVPN | 1,543 | 189 |
-| VPN | 143 | 1,721 |
+The saved notebook includes all outputs. It downloads the raw feature file and recomputes its results without importing an external result file. The report and presentation are supplied separately.
 
-There are **189 false VPN alarms** and **143 missed VPN flows**, giving 332 errors among 3,596 test flows. The reference model finds every VPN flow because it labels every flow as VPN, which also produces false alarms for all NonVPN flows.
+## Data and interpretation
+
+The [ISCXVPN2016 dataset](https://www.unb.ca/cic/datasets/vpn.html) is described by the University of New Brunswick. The notebook uses [this pinned feature-file copy](https://github.com/shafwanur/thd-ss25-ml-project/blob/b4488cf1022157a319d9ccdfa36f86cb940e2b80/data/15s.arff), checked with SHA-256 `8b12e8c0cd49f56af28cdaa7c2aa7795ee24de0b1bedf638280e00404f7c1563`. Its identity with the registration-gated original archive has not been independently checked.
+
+The [original ISCXFlowMeter code](https://github.com/ahlashkari/ISCXFlowMeter/blob/f3287486f114350b0b79dcfcf1050bc6a85190cf/src/main/java/iscx/cs/unb/ca/ifm/data/BasicFlow.java#L168-L172) documents duration in microseconds. The histogram divides it by 1,000,000 and labels seconds. It shows the complete range and a clearly labelled 0–15 second zoom. All longer flows remain in the experiment. Low Pearson correlation means weak linear association, not that a feature has no predictive value.
 
 ## Reproducibility and limitations
 
-The saved environment output reports Python 3.13.16, scikit-learn 1.6.1, pandas 2.2.3 and NumPy 2.1.3. The notebook also uses matplotlib. Its first cell prints the environment versions and installs missing libraries. It does not pin all package versions, so a different Colab environment may produce slightly different results even with a fixed random seed.
+The run used Python 3.12.14, scikit-learn 1.6.1, pandas 2.2.3, NumPy 2.1.3, matplotlib 3.10.7. The notebook prints installed versions. A different runtime may produce slightly different results, even with the same random seed.
 
-- Training accuracy is 99.993%, about 9.23 percentage points above test accuracy. This indicates overfitting.
-- The test partition was examined in earlier project versions. It is a development test, not a new independent evaluation.
-- Removing conflicting observations excludes some difficult cases. These results describe the cleaned dataset.
-- Session identifiers are unavailable, so related flows may appear in both partitions.
-- The dataset is historical. A stronger next step would evaluate independent new traffic captures.
+The search and final selection use training-fold results only. The test partition was already viewed in earlier versions and in an initial strict-maximum-CV search. The rule was then revised from training-fold diagnostics and frozen before the final run. This is a reused development test, not independent confirmation. The selected CV score also has selection optimism. Related sessions may cross the split, conflicting rows were removed, and the traffic is historical. New independent captures are needed before deployment claims.
 
-This is an offline classification experiment. It requires the nine measured features and does not directly inspect a person's current connection or determine whether their VPN is switched on.
-
-## AI acknowledgment
-
-OpenAI Codex supported explanations, data-source research, code generation and debugging, local execution of an earlier project version, figures and drafting. The students are responsible for reviewing the work and understanding the submitted methods and results. Any remaining individual contribution fields in the notebook should be completed with the actual information before submission.
+OpenAI Codex supported research, explanations, code, debugging, local execution, figures and document drafts. The students remain responsible for understanding and explaining the work and completing their actual contribution details.
