@@ -2,58 +2,87 @@
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/SAS2005/VPN-NonVPN-Classification-project/blob/main/TAM400_VPN_Notebook_Ready.ipynb)
 
-This TAM400 project classifies VPN and NonVPN network flows using nine numerical measurements. The revised notebook contains all data preparation, training, tuning, graphs and final results in one place. All saved results come from the same completed local run.
+This TAM400 project compares classifiers using nine numerical network-flow measurements. The latest experiment seeks a Random Forest with strong validation performance and a smaller training–validation gap. All code, training, tuning, plots and saved results are in one notebook. The saved outputs come from one completed local execution.
 
-## Run the complete project
+## Run the project
 
-1. Click **Open in Colab** above.
-2. Use a normal CPU runtime and choose **Runtime > Run all**.
-3. Review every table and graph beneath its code cell. Section 15 prints the final comparison.
-4. Save a copy to Google Drive to keep any changes you make.
+Click the Colab button, use a CPU runtime and select **Runtime > Run all**. Alternatively, download `TAM400_VPN_Notebook_Ready.ipynb` from this repository and upload it to Colab. Save a copy to Google Drive to keep changes. The earlier Drive notebook is a separate copy and does not sync automatically.
 
-The Colab button opens this revised GitHub notebook. The earlier Drive notebook does not sync automatically and still contains its separate copy.
+The notebook downloads only the raw feature file. It does not import a saved model or an external results file. It evaluates **203 settings with five-fold stratified CV**, then fits the selected configuration and evaluates the test set once. A separate five-value leaf-size curve is diagnostic and cannot change selection. The local code execution took about 29 minutes, excluding the pause for internal review. Colab runtime depends on the machine.
 
-The notebook downloads only the raw feature file. All training, search, prediction and results are computed in this one notebook. Saved outputs are included. No saved model or separate results file needs to be imported. The 64-setting, three-fold search requires 192 CV fits. Runtime depends on the machine.
+## Measured comparison
 
-## Final model comparison
-
-| Metric | Default RF | Tuned RF |
+| Metric | Default RF | Selected RF |
 |---|---:|---:|
-| Training accuracy | 99.99% | 97.75% |
-| Mean CV VPN F1 | 0.8946 | 0.8930 |
-| CV F1 standard deviation | 0.0062 | 0.0037 |
-| Mean CV training VPN F1 | 1.0000 | 0.9774 |
-| Training–validation F1 gap | 0.1054 | 0.0844 |
-| Test accuracy | 90.66% | 90.41% |
-| VPN precision | 90.08% | 89.25% |
+| Training accuracy | 99.99% | 96.73% |
+| Mean CV training accuracy | 100.00% | 96.99% |
+| Mean CV validation accuracy | 89.32% | 88.92% |
+| Mean CV training VPN F1 | 1.0000 | 0.9712 |
+| Mean CV validation VPN F1 | 0.8976 | 0.8949 |
+| CV F1 standard deviation | 0.0064 | 0.0046 |
+| CV training–validation F1 gap | 0.1024 | 0.0764 |
+| Test accuracy | 90.66% | 90.24% |
+| VPN precision | 90.08% | 88.97% |
 | VPN recall | 92.11% | 92.65% |
-| VPN F1 | 0.9109 | 0.9092 |
-| ROC-AUC | 0.9677 | 0.9677 |
-| Training–test accuracy gap | 9.34 points | 7.35 points |
+| VPN F1 | 0.9109 | 0.9078 |
+| ROC-AUC | 0.9677 | 0.9671 |
 
-The final choice is **Tuned RF**: `max_depth=20`, `min_samples_split=10`, `min_samples_leaf=1`, `max_features="sqrt"`, with 100 trees. The changed controls are maximum depth (unlimited to 20) and minimum split size (2 to 10).
+The selected forest is chosen using training-data cross-validation only. The highest mean validation VPN F1 is **0.8976**. Dividing that candidate's fold standard deviation by the square root of five gives an allowance of **0.0029**, so candidates scoring at least **0.8947** are eligible. Among the **9** eligible settings, the selected forest has the smallest nonnegative fold-training minus validation F1 gap. Ties use higher validation F1, then fixed candidate order.
 
-The highest mean CV F1 was 0.8949. Its fold standard deviation divided by the square root of three gave an allowance of 0.0027. This made the eligibility threshold 0.8922. Among 9 eligible settings, the selected model had the smallest fold-training/validation F1 gap. Higher mean CV F1 and then grid order break ties. This is a practical selection heuristic, not a test of statistical equivalence.
+This allowance is a practical model-selection heuristic, not a confidence interval or proof of equal performance. The candidate list, random seeds and rule were fixed before fitting. The requested target ranges did not select candidates, and no test metric entered this rule.
 
-The selected model gives up 0.0015 mean validation F1 relative to the default forest. Its training–validation F1 gap decreases from 0.1054 to 0.0844. This supports reduced overfitting in this experiment, but a substantial gap remains. The test scores did not select the parameters.
+Relative to the default in this five-fold run, selected validation F1 changes by **-0.0027**, and the training–validation F1 gap changes from **0.1024** to **0.0764**. Full-training accuracy changes from **99.99%** to **96.73%**. These results must be assessed together; lower training accuracy alone does not establish better generalization.
 
-## Notebook and revisions
+| Selected parameter | Value |
+|---|---|
+| `criterion` | `gini` |
+| `max_depth` | `16` |
+| `max_features` | `6` |
+| `max_samples` | `0.75` |
+| `min_samples_leaf` | `2` |
+| `min_samples_split` | `2` |
+| `n_estimators` | `200` |
 
-- [Complete executed notebook](TAM400_VPN_Notebook_Ready.ipynb)
-- [Detailed revision guide](CHANGES.md)
+## Desired ranges and actual outcome
 
-The saved notebook includes all outputs. It downloads the raw feature file and recomputes its results without importing an external result file. The report and presentation are supplied separately.
+| Metric | Desired range | Observed | Within range |
+|---|---|---:|---|
+| Full-training accuracy | 92–93% | 96.73% | No |
+| Mean validation VPN F1 | 0.91–0.92 | 0.8949 | No |
+| Test accuracy | 91–92% | 90.24% | No |
 
-## Data and interpretation
+No candidate in this bounded search reached 0.91 mean validation VPN F1, so no searched candidate met all the desired ranges. This does not rule out every possible Random Forest configuration.
 
-The [ISCXVPN2016 dataset](https://www.unb.ca/cic/datasets/vpn.html) is described by the University of New Brunswick. The notebook uses [this pinned feature-file copy](https://github.com/shafwanur/thd-ss25-ml-project/blob/b4488cf1022157a319d9ccdfa36f86cb940e2b80/data/15s.arff), checked with SHA-256 `8b12e8c0cd49f56af28cdaa7c2aa7795ee24de0b1bedf638280e00404f7c1563`. Its identity with the registration-gated original archive has not been independently checked.
+The test set is evaluated only after the selection is frozen. Its result does not trigger another search. Lower training accuracy is not an objective by itself. Both accuracy and F1 are recorded so their gaps are compared using the same metric.
 
-The [original ISCXFlowMeter code](https://github.com/ahlashkari/ISCXFlowMeter/blob/f3287486f114350b0b79dcfcf1050bc6a85190cf/src/main/java/iscx/cs/unb/ca/ifm/data/BasicFlow.java#L168-L172) documents duration in microseconds. The histogram divides it by 1,000,000 and labels seconds. It shows the complete range and a clearly labelled 0–15 second zoom. All longer flows remain in the experiment. Low Pearson correlation means weak linear association, not that a feature has no predictive value.
+## What the search covers
+
+The fixed parameter space contains depth 6, 8, 10, 12, 16, 20 or unlimited; leaf minimum 1, 2, 4, 8 or 16; split minimum 2, 10 or 20; feature sampling sqrt, six or all nine; bootstrap sample fraction 0.2, 0.35, 0.5, 0.75 or the full row count; and Gini or entropy splitting. Two hundred combinations are sampled without replacement using seed 42, each with 200 trees. Three controls retain the original 100-tree default, the previous 100-tree tuned configuration and a 200-tree default. The search uses GridSearchCV on that fixed list.
+
+The same cleaned data, nine inputs and 80/20 stratified split with seed 42 are retained. Five shuffled stratified folds replace the previous three-fold procedure. All models in this comparison use those same five folds. Preprocessing is learned inside each fold. Bootstrap sampling is with replacement within the training fold and does not change the held-out test partition. The prediction threshold remains unchanged.
+
+## Dataset and sources
+
+- [Official ISCXVPN2016 dataset description, UNB/CIC](https://www.unb.ca/cic/datasets/vpn.html)
+- [Dataset research paper](https://doi.org/10.5220/0005740704070414)
+- [Exact pinned public feature-file copy](https://github.com/shafwanur/thd-ss25-ml-project/blob/b4488cf1022157a319d9ccdfa36f86cb940e2b80/data/15s.arff)
+- [Original flow-meter implementation documenting microseconds](https://github.com/ahlashkari/ISCXFlowMeter/blob/f3287486f114350b0b79dcfcf1050bc6a85190cf/src/main/java/iscx/cs/unb/ca/ifm/data/BasicFlow.java#L168-L172)
+- [RandomForestClassifier parameter documentation](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html)
+
+The data checksum is `8b12e8c0cd49f56af28cdaa7c2aa7795ee24de0b1bedf638280e00404f7c1563`. It fixes the exact mirror bytes; the mirror has not been independently compared with the official registration-gated archive. The raw file has 18,758 flows. Cleaning removes 779 duplicate/conflicting rows, leaving 17,979: 14,383 training and 3,596 test flows.
+
+Duration is converted from microseconds to seconds only for its histogram. The full-range plot and labelled zoom keep longer flows in the experiment. Pearson correlation measures linear association; small values do not exclude useful nonlinear relationships.
 
 ## Reproducibility and limitations
 
-The run used Python 3.12.14, scikit-learn 1.6.1, pandas 2.2.3, NumPy 2.1.3, matplotlib 3.10.7. The notebook prints installed versions. A different runtime may produce slightly different results, even with the same random seed.
+The final run used Python 3.12.14, scikit-learn 1.6.1, pandas 2.2.3, NumPy 2.1.3, matplotlib 3.10.7. Versions are printed in the notebook. Other runtime versions can produce small differences.
 
-The search and final selection use training-fold results only. The test partition was already viewed in earlier versions and in an initial strict-maximum-CV search. The rule was then revised from training-fold diagnostics and frozen before the final run. This is a reused development test, not independent confirmation. The selected CV score also has selection optimism. Related sessions may cross the split, conflicting rows were removed, and the traffic is historical. New independent captures are needed before deployment claims.
+The test partition was examined in earlier revisions. This final evaluation therefore uses a reused development test, not a fresh independent holdout. Re-running does not erase that history. The same CV folds were used to search and select, so selected CV results can be optimistic. Related sessions may cross the split, conflict removal excludes some difficult cases, and the dataset is historical. Independent new captures are needed before claiming performance on new networks.
 
-OpenAI Codex supported research, explanations, code, debugging, local execution, figures and document drafts. The students remain responsible for understanding and explaining the work and completing their actual contribution details.
+This is an offline classification experiment requiring nine measured features. It does not inspect a person's current connection or detect their VPN switch directly.
+
+## Files and assistance
+
+The local package contains the complete notebook, five-page report, PowerPoint, spoken script, figures, CSV exports and `results.json`. `CHANGES.md` lists the revised cells and document sections. These result exports are for inspection; the notebook does not load them. GitHub contains the complete notebook and README; the report, slides and script are supplied separately.
+
+OpenAI Codex supported explanations, research, code, debugging, local execution, figures and drafts. The students are responsible for reviewing and understanding the work. Complete the individual-contribution fields with the work actually done by each student.
