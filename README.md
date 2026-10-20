@@ -4,13 +4,15 @@
 
 TAM400 project by **Shucayb AHmed Said and Ayub Ali Barre, Group 17**.
 
-The project compares three classifiers for recorded network flows and investigates Random Forest regularization. **The recommended practical compromise is RF-206**, with 0.8938 mean ten-fold VPN F1 and a 0.0467 paired training–validation F1 gap. Original RF retains the highest observed validation F1, 0.9016, with a larger 0.0984 gap. The new local search did not find a configuration that improves on RF-206 under the disclosed practical rule. This recommendation exchanges some validation performance for simpler trees and a smaller fit gap; it does not establish higher predictive accuracy.
+The project compares three classifiers for recorded network flows and investigates Random Forest regularization. **The recommended practical compromise is RF-206**, with 0.8938 mean ten-fold VPN F1 and a 0.0467 paired training–validation F1 gap. Original RF retains the highest observed validation F1, 0.9016, with a larger 0.0984 gap. The earlier local search did not find a configuration that improves on RF-206 under the disclosed practical rule. This recommendation exchanges some validation performance for simpler trees and a smaller fit gap; it does not establish higher predictive accuracy.
+
+**Final evaluation update:** the already-selected RF-206 achieves **89.3215% reused-test accuracy** and **0.899371069 reused-test VPN F1**. Reused development-test evaluation — not an independent untouched test. This update preserves the model and all previous cross-validation results.
 
 ## Run everything in one Colab notebook
 
 Open the Colab button, choose a fresh **CPU runtime**, then **Runtime > Run all**. No separate results notebook, saved model or external result file is needed. The first cell installs the pinned package versions if needed. If Colab requests a restart after installation, restart and run all again. An internet connection is required for installation and the pinned raw dataset download.
 
-The notebook has **37 cells, including 20 code cells**. All 20 executed successfully in the saved reference run on 19 October 2026, taking about **16 minutes locally**. Colab timing will vary. Running all cells recomputes training, screening, validation, curves and exports. All results are saved in `advanced_results/` in the runtime. Download that folder before the runtime expires if you want to keep the CSV and JSON files.
+The notebook has **37 cells, including 20 code cells**. All 20 executed successfully in the complete rerun on 20 October 2026, taking about **16.1 minutes locally**. Colab timing will vary. Running all cells recomputes the unchanged training, screening, validation and curves, then the frozen reused-test evaluation and exports. All results are saved in `advanced_results/` in the runtime. Download that folder before the runtime expires if you want to keep the CSV and JSON files.
 
 The local download is named `TAM400_VPN_Advanced_Colab.ipynb`; GitHub retains the established filename `TAM400_VPN_Notebook_Ready.ipynb` for the Colab link. Earlier Drive copies do not update automatically.
 
@@ -58,7 +60,7 @@ Every value in the following comparison uses the same ten shuffled stratified fo
 | RF-210 | 88.42% | 87.36% | 90.81% | 0.9282 |
 | Recommended tuned RF (RF-206) | 88.78% | 87.72% | 91.12% | 0.9405 |
 
-## Part B: Controlled Random Forest optimization
+## Part B: Previously completed Random Forest optimization
 
 All four historical reference forests reproduced their saved ten-fold metrics and fold F1 values to numerical tolerance **before any new configuration was fitted**.
 
@@ -76,7 +78,7 @@ Common forest settings are `bootstrap=True`, `random_state=42`, `class_weight=No
 
 RF-206 restricts depth, minimum leaf size, split size and the bootstrap draw compared with Original RF. It considers **five features per split versus Original's three** under `sqrt` for nine features. Increased feature sampling, entropy and 200 trees cannot simply be called stronger regularization. The local one-parameter experiments measure effects conditional on the other RF-206 settings. RF-210 changes both tree count and split size relative to RF-206, so that comparison alone cannot isolate their effects.
 
-The local search contains **23 unique configurations**, including RF-206 and 22 one-parameter perturbations. **20 configurations are genuinely new** relative to retained historical grids; RF-206 and the split minima 20 and 30 already appeared there. All 23 are recomputed for a self-contained experiment.
+The preserved local search contains **23 unique configurations**, including RF-206 and 22 one-parameter perturbations. **20 configurations are genuinely new** relative to retained historical grids; RF-206 and the split minima 20 and 30 already appeared there. All 23 are recomputed for a self-contained experiment.
 
 | Parameter varied | Values, with all other settings fixed at RF-206 |
 | --- | --- |
@@ -121,16 +123,50 @@ Depth, leaf and split validation curves reuse the controlled screening fits. At 
 
 The notebook also includes class counts, duration and Pearson plots, model and gap comparisons, the F1/gap Pareto frontier, validation versus measured tree complexity, ten-fold impurity importance and held-out-fold permutation importance. Importance error bars show descriptive fold variation, not confidence intervals. Correlated inputs may substitute for one another, so these figures are not causal explanations and do not justify dropping features after selection. See [permutation importance guidance](https://scikit-learn.org/stable/modules/permutation_importance.html).
 
-## Test status and targets
+## Frozen model evaluation on the reused test partition
 
-**There are no new test predictions in this revision.** Test metrics never enter candidate screening, ranking or the final recommendation. The historical partition had already been inspected in earlier versions. Its archived Original RF score is retained only for context:
+**Reused development-test evaluation — not an independent untouched test.**
 
-| Model | Evaluation status | Accuracy | VPN precision | VPN recall | VPN F1 | ROC-AUC |
-| --- | --- | --- | --- | --- | --- | --- |
-| Original RF | Historical, previously inspected partition | 90.66% | 90.08% | 92.11% | 0.9109 | 0.9677 |
-| Recommended tuned RF | No fresh independent evaluation | Unavailable | Unavailable | Unavailable | Unavailable | Unavailable |
+RF-206 was selected before this final evaluation update. It retains 200 trees, entropy, depth 14, leaf minimum 4, split minimum 10, five features per split, bootstrap fraction 0.7, `bootstrap=True` and seed 42. No new hyperparameter candidates, threshold adjustments or test-based model selection were introduced. The full notebook rerun reproduces the existing training-only experiments, then fits this frozen pipeline on all 14,383 training rows. Median imputation is fitted only on those training rows. Test predictions use the classifier's unchanged `predict` method.
 
-The desired 92–93% training accuracy and 0.91–0.92 validation F1 were not achieved by the recommendation: its actual values are **93.76% and 0.8938**. No ten-fold forest finalist reached 0.91 F1. Independent test accuracy is unavailable, so the 91–92% test target cannot be assessed. The targets did not filter configurations or force scores.
+| Metric | Original Random Forest | Tuned Random Forest (RF-206) |
+| --- | --- | --- |
+| Training Accuracy | 99.9930% | 93.7635% |
+| Training VPN F1 | 0.999932935 | 0.940615690 |
+| Mean 10-fold Validation VPN F1 | 0.901607369 | 0.893824214 |
+| Train–Validation F1 Gap | 0.098392631 | 0.046692095 |
+| Test Accuracy | 90.6563% | 89.3215% |
+| Test VPN precision | 90.0839% | 87.9098% |
+| Test VPN recall | 92.1137% | 92.0601% |
+| Test VPN F1 | 0.910875332 | 0.899371069 |
+| Test ROC-AUC | 0.967685402 | 0.963941807 |
+
+Original RF's test results remain historical. Tuned Random Forest's measurements use the same 3,596-row partition. The gap is the mean paired fold-training minus fold-validation F1; full-training F1 is a separate measurement.
+
+### Confusion matrices
+
+Rows are actual classes; columns are predictions. VPN is positive class 1.
+
+| Model | Actual class | Predicted NonVPN | Predicted VPN |
+| --- | --- | --- | --- |
+| Original RF (historical) | NonVPN | 1543 | 189 |
+| Original RF (historical) | VPN | 147 | 1717 |
+| Tuned Random Forest | NonVPN | 1496 | 236 |
+| Tuned Random Forest | VPN | 148 | 1716 |
+
+For RF-206, TN=1496, FP=236, FN=148 and TP=1716. We verified:
+
+- Accuracy = (1496 + 1716) / 3596 = **0.8932146829810901**.
+- VPN precision = 1716 / (1716 + 236) = **0.8790983606557377**.
+- VPN recall = 1716 / (1716 + 148) = **0.9206008583690987**.
+- VPN F1 = 3432 / (3432 + 236 + 148) = **0.8993710691823900**.
+- ROC-AUC = **0.9639418073328113**, computed from VPN probabilities with `roc_auc_score`, not from predicted class labels.
+
+The four class-label metrics match scikit-learn's accuracy, precision, recall and F1 functions, with `pos_label=1` for VPN. The confusion matrix uses `labels=[0,1]`. ROC-AUC cannot be reconstructed from the confusion matrix alone.
+
+RF-206's reused-test F1 (0.8994) is broadly consistent with its mean ten-fold F1 (0.8938). Original RF retains higher accuracy and F1 on this partition, as in validation. RF-206 makes 47 additional false VPN alarms and one additional missed VPN flow. Its smaller training–validation gap therefore remains a practical trade-off, not proof of higher predictive accuracy. RF-206 remains frozen regardless of these outcomes.
+
+The training, validation and reused-test targets were not reached. A fresh independent test estimate remains unavailable. This already inspected partition cannot provide an unbiased independent performance estimate.
 
 ## Limitations and next steps
 
@@ -144,8 +180,8 @@ This is an offline experiment on measured flow summaries, not a detector of a co
 
 ## Deliverables and experiment tracking
 
-The complete local package contains the executed notebook, five-page report, PowerPoint, two-presenter speaking script, eleven figures, full CSV tables and JSON records. `CHANGES.md` answers the requested 20 audit questions. The notebook creates all result exports itself and never imports them.
+The complete local package contains the executed notebook, five-page report, PowerPoint, two-presenter speaking script, twelve figures, full CSV tables and JSON records. `CHANGES.md` answers the requested 20 audit questions. The notebook creates all result exports itself and never imports them.
 
-Key exports are `required_comparison.csv`, `finalist_comparison.csv`, `finalist_fold_scores.csv`, `oat_screening.csv`, `oat_screening_fold_scores.csv`, `model_parameters.json`, `selection_criteria.csv`, `paired_fold_differences.csv`, `pareto_candidates.csv`, `nested_outer_results.csv`, `nested_inner_fold_scores.csv`, `final_selection.json` and `results.json`. Earlier experiments remain preserved in the local history folders and repository history. Their original 0.005 selection outcome has not been rewritten.
+Key exports are `required_comparison.csv`, `finalist_comparison.csv`, `finalist_fold_scores.csv`, `oat_screening.csv`, `oat_screening_fold_scores.csv`, `model_parameters.json`, `selection_criteria.csv`, `paired_fold_differences.csv`, `pareto_candidates.csv`, `nested_outer_results.csv`, `nested_inner_fold_scores.csv`, `final_selection.json`, `results.json`, `reused_test_evaluation.json`, `rf206_reused_test_predictions.csv` and `final_train_validation_test_comparison.csv`. Earlier experiments remain preserved in the local history folders and repository history. Their original 0.005 selection outcome has not been rewritten.
 
 OpenAI Codex supported explanations, research, code generation, debugging, local execution, figures and drafts. The students are responsible for reviewing and understanding the work, and for describing individual contributions accurately.
