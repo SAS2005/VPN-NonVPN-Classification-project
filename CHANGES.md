@@ -1,140 +1,195 @@
-# Final systematic tuning results and changes
+# Final advanced revision record
 
-The experiment is complete, but the requested reduction in overfitting was not achieved by the final selected model. The frozen rule retains Original RF. No test score chose the model, no target was forced and no improvement is fabricated.
+The final analysis preserves prior experiments and changes the recommended practical trade-off through an explicitly post-hoc rule. It does not claim a newly discovered higher-F1 model.
 
-## Requested results A to O
+## 1. Were DummyClassifier and SGDClassifier preserved?
 
-| Item | Measurement | Result |
-|---|---|---|
-| A | Unique three-fold search configurations | 285 |
-| B | Shortlisted new models | 18 |
-| C | Models evaluated with ten-fold CV | 20 = 18 + 2 controls |
-| D | Final hyperparameters | See parameter table below |
-| E | Full-training accuracy | 99.99% |
-| F | Full-training VPN F1 | 0.9999 |
-| G | Mean ten-fold validation VPN F1 | 0.9016 |
-| H | Ten-fold validation F1 standard deviation | 0.0072 |
-| I | Paired fold-training–validation F1 gap | 0.0984 |
-| J | Test accuracy | 90.66% |
-| K | VPN precision | 90.08% |
-| L | VPN recall | 92.11% |
-| M | VPN F1 | 0.9109 |
-| N | ROC-AUC | 0.9677 |
-| O | Confusion matrix, rows actual NonVPN/VPN | [[1543, 189], [147, 1717]] |
+Yes. The original majority strategy and default hinge-loss SGD definition remain, with fold-fitted preprocessing. All three algorithms are compared on the same ten folds.
 
-Item I uses paired scores from the same CV fits. Full-training F1 minus mean ten-fold F1 is 0.0983, a different comparison.
+## 2. What are the exact parameters of Original RF?
 
-| Parameter | Original RF | Previous Tuned RF | Final RF |
-|---|---|---|---|
-| `n_estimators` | `100` | `200` | `100` |
-| `max_depth` | `None` | `16` | `None` |
-| `min_samples_leaf` | `1` | `2` | `1` |
-| `min_samples_split` | `2` | `2` | `2` |
-| `max_features` | `sqrt` | `6` | `sqrt` |
-| `max_samples` | `None` | `0.75` | `None` |
-| `criterion` | `gini` | `gini` | `gini` |
+The full dictionary is printed below and saved in model_parameters.json. It has 100 Gini trees, no depth cap, leaf minimum 1, split minimum 2, sqrt features (3 here), full-size bootstrap draws and seed 42.
 
-## Same-run comparison
+## 3. What are the exact parameters of RF-206?
 
-| Metric | Original RF | Previous Tuned RF | Final RF |
-|---|---:|---:|---:|
-| Training accuracy | 99.99% | 96.73% | 99.99% |
-| Training VPN F1 | 0.9999 | 0.9688 | 0.9999 |
-| Mean fold-training VPN F1 | 1.0000 | 0.9699 | 1.0000 |
-| Mean validation VPN F1 | 0.9016 | 0.8965 | 0.9016 |
-| CV folds | 10 | 10 | 10 |
-| Validation F1 standard deviation | 0.0072 | 0.0090 | 0.0072 |
-| Paired fold training–validation F1 gap | 0.0984 | 0.0733 | 0.0984 |
-| Full-training F1 minus mean CV F1 | 0.0983 | 0.0723 | 0.0983 |
-| Test accuracy | 90.66% | 90.24% | 90.66% |
-| Test VPN precision | 90.08% | 88.97% | 90.08% |
-| Test VPN recall | 92.11% | 92.65% | 92.11% |
-| Test VPN F1 | 0.9109 | 0.9078 | 0.9109 |
-| Test ROC-AUC | 0.9677 | 0.9671 | 0.9677 |
+The full dictionary is printed below. It has 200 entropy trees, depth 14, leaf minimum 4, split minimum 10, five features per split, bootstrap fraction 0.70 and seed 42.
 
-## Selection and diagnostic evidence
+## 4. What changes made RF-206 more regularized?
 
-The fixed rule retains models within **0.005 absolute F1** of the best ten-fold mean, then prefers the smallest nonnegative paired fold-training minus validation F1 gap. Further tie-breakers are lower fold-training accuracy, lower validation standard deviation and a fixed complexity order. The desired ranges do not filter candidates.
+Depth, leaf, split and bootstrap restrictions limit tree fitting. It uses more features per split than Original, not fewer. Criterion and tree count also differ; controlled local sweeps support conditional effects rather than attributing the whole difference to one parameter.
 
-The best mean is **0.901607**, giving a cutoff of **0.896607**. Only Original RF is eligible, so **Final RF is Original RF**. Previous Tuned RF scores **0.896546**, just **0.00006093** below that cutoff. This is a sensitive practical rule, not evidence of statistically significant superiority. We did not widen the allowance after observing results.
+## 5. Was RF-206 reproduced successfully?
 
-The strongest new regularized candidate, **RF-206**, has **93.76%** training accuracy, **0.8938** ten-fold F1 and a **0.0467** paired gap. Its validation loss versus the peak is **0.0078**, exceeding the fixed allowance. RF-210 reaches **92.57%** training accuracy, but its ten-fold F1 is **0.8904**. Neither candidate was evaluated on the test set.
+Yes. All four reference forests reproduced their historical ten-fold metrics and fold F1 values exactly in the reference environment before any new fits.
 
-The final model therefore does **not** reduce overfitting: its paired F1 gap is **0.0984**, unchanged from Original RF and larger than the previous model's **0.0733**. The search found a real trade-off, but did not achieve the requested improvement under the prespecified rule. No evaluated ten-fold candidate reached 0.91 validation F1.
+## 6. How many additional configurations were tested?
 
-| Candidate | Full-training accuracy | Full-training F1 | 10-fold F1 | Fold F1 gap |
-|---|---:|---:|---:|---:|
-| RF-210 | 92.57% | 0.9292 | 0.8904 | 0.0378 |
-| RF-206 | 93.76% | 0.9406 | 0.8938 | 0.0467 |
-| Original RF | 99.99% | 0.9999 | 0.9016 | 0.0984 |
-| Previous Tuned RF | 96.73% | 0.9688 | 0.8965 | 0.0733 |
+23 local settings were screened, including the center and 22 one-parameter perturbations. Twenty settings were genuinely new relative to retained grids. Eight nonreference settings advanced to ten folds, six of them genuinely new; the final comparison has 12 forests plus Dummy and SGD.
 
-The Original and Final learning curves coincide. At the largest three-fold learning-curve size, mean training F1 is 0.9999 and validation F1 is 0.8943, leaving a gap of 0.1056. The previous forest has a smaller 0.0825 gap at that size. Validation improves as more training rows are used, but the remaining separation supports the concern about overfitting.
+## 7. Was a better Random Forest found?
 
-The depth diagnostic gives training/validation F1 of about 0.7727/0.7694 at depth 4 versus 1.0000/0.8946 with unlimited depth. The leaf diagnostic falls to about 0.8838/0.8586 at leaf size 30. Strong regularization can lower both scores substantially, which is evidence of underfitting in the more restrictive settings. The final model remains too flexible; it is not an underfitted model. These three-fold diagnostics must not be substituted for the ten-fold selection scores.
+No new finalist improved the preferred F1/gap compromise. Local-04 improved RF-206 F1 to 0.8959 but increased the gap to 0.0562. Original retained the highest observed F1. RF-206 remains the practical recommendation under exploratory C.
 
-| Metric | Desired range | Measured | Within range |
-|---|---|---:|---|
-| Training accuracy | 92–93% | 99.99% | No |
-| 10-fold validation VPN F1 | 0.91–0.92 | 0.9016 | No |
-| Test accuracy | 91–92% | 90.66% | No |
+## 8. What was the highest validation VPN F1?
 
-## Answers to the thirteen questions
+Original RF: 0.901607 mean ten-fold VPN F1. The highest genuinely new finalist was Local-04: 0.895882.
 
-### 1. Did the final tuning reduce overfitting?
+## 9. Which candidate had the best reasonable generalization gap?
 
-No. Final RF is Original RF. Its paired F1 gap remains 0.0984. Some regularized candidates have smaller gaps, but lose more validation F1 than the fixed allowance permits.
+RF-206 has the smallest gap within the disclosed 0.010 F1 allowance and stability cap: 0.046692. Local-14 has a smaller unrestricted gap, 0.033183, but its F1 drops to 0.886125 outside that allowance.
 
-### 2. Is the training–validation gap smaller than before?
+## 10. How did the previous rule affect the result?
 
-No for the final choice. It is unchanged from Original RF and larger than Previous Tuned RF (0.0733), using the same ten folds.
+The unchanged 0.005 rule selects Original. Its 0.896607 cutoff excludes Previous Tuned at 0.896546 and excludes RF-206. This sensitive practical rule is not a significance test.
 
-### 3. Is the final model closer to 92–93% training accuracy?
+## 11. Did exploratory analysis change the recommendation?
 
-No. Its full-training accuracy is 99.99%. RF-210 reaches 92.57% but its validation F1 is 0.8904; training accuracy alone did not determine selection.
+Yes. Post-hoc criterion C widens the allowance to 0.010 and chooses RF-206. This is explicitly a change in practical preference informed by earlier results, not a new historical prespecification.
 
-### 4. Did validation performance remain strong?
+## 12. Did the preferred model reduce the observed overfitting gap?
 
-The final ten-fold VPN F1 is 0.9016, highest among the 20 evaluated settings, but below 0.91–0.92. This score is useful for comparison, not a guarantee on new networks.
+Yes: 0.098393 to 0.046692, a 52.5% relative reduction. Validation F1 also decreases by 0.007783, so this is not proof of better predictive generalization.
 
-### 5. Did the model begin to underfit?
+## 13. Did any candidate appear to underfit?
 
-The final model does not show underfitting: its training F1 remains near 1 while validation is lower. The more restrictive depth and leaf settings lower both training and validation F1, showing underfitting at the strong-regularization end.
+The most restrictive settings lower both training and validation F1. For example depth 10 gives 0.9092/0.8729 versus depth 14 at 0.9409/0.8864 in three-fold screening. This supports relative underfitting; no absolute training-accuracy threshold defines it.
 
-### 6. Why was the final model selected?
+## 14. What supports the recommendation?
 
-Only Original RF clears the fixed 0.896607 ten-fold F1 cutoff. The smaller-gap ranking therefore has no other eligible candidate. Previous Tuned RF misses by only 0.00006093, so the choice is sensitive to the practical margin, not evidence of a significant difference.
+Identical-fold reproduction, stable 0.008693 fold F1 SD, smaller measured trees, a smaller paired gap, Pareto efficiency and the disclosed tolerance support a practical compromise. Original beats RF-206 in 9 of 10 paired folds, so its observed predictive advantage remains clear descriptively.
 
-### 7. Why three-fold CV for the broad search?
+## 15. Were the target ranges achieved?
 
-It makes the 285-configuration comparison computationally feasible: 855 CV fits instead of 2,850. Stratification keeps class proportions similar and identical folds support consistent comparisons.
+No. Recommended training accuracy is 93.76% and ten-fold F1 is 0.8938. Independent test accuracy is unavailable. RF-210 reaches the training range alone but has lower F1; targets never drove selection.
 
-### 8. Why ten-fold CV for final validation?
+## 16. Were test labels completely excluded from model selection?
 
-The 20 shortlisted/control settings receive a common, more detailed comparison, fitting on 90% of the training partition per fold. It is more expensive, so it is limited to the shortlist. It does not guarantee a higher score or independence from selection.
+No test predictions, scores or held-out labels enter the new tuning or selection code. However, it would be inaccurate to claim the complete workflow never depended on held-out labels: preserved conflict cleaning used all source labels before splitting, and the old test had been viewed historically.
 
-### 9. Why exclude the test set from selection?
+## 17. What evaluation limitations remain?
 
-Using test scores to choose parameters would make the evaluation part of tuning. The choice was frozen before this final test phase, and predictions were reused. Earlier test exposure remains disclosed; the partition is not a fresh holdout.
+Adaptive selection, global label-dependent cleaning, unknown session grouping, close flows, historical capture artifacts, unverified mirror provenance and no fresh independent test. The 3-by-3 conditional nested result (0.884643) checks only the local selection procedure conditional on the historical center and cannot erase earlier adaptivity.
 
-### 10. Which notebook cells changed?
+## 18. Which files were modified?
 
-Cells 1, 3, 8, 16–17 and 19–21 update the purpose, imports, rules, two fixed controls and three-fold screening. Cells 22–33 replace the old search with three stages, an 18-model shortlist, common ten-fold comparison and freeze. Cells 34–37 add learning and depth/leaf curves. Cells 38–43 update the final test phase, three-model matrices and comparison. Cells 44–45 update interpretation and sources. Data/cleaning/split and corrected EDA cells 4–15 retain their underlying methods. All 21 code cells have saved outputs.
+New advanced notebook, report, presentation, script, README, CHANGES, figures, CSV/JSON tracking and QA records. Older output directories remain byte-identical. GitHub publication is gated on all final artifact checks.
 
-### 11. Which report sections changed?
+## 19. Did the entire notebook execute successfully?
 
-Abstract and Introduction state the unresolved objective and actual outcome. Experimental Setup explains staged three-fold search, shortlist and ten-fold rule. Results and Discussion add the three-model comparison, parameters, curves and cutoff sensitivity. Conclusion states that overfitting was not reduced in the final choice. Methodology retains corrected duration and Pearson explanations. References and acknowledgment are current. The report remains five pages including references.
+Yes. All 20 code cells in the 37-cell notebook executed, with actual outputs saved. The reference run took 947 seconds, about 16 minutes locally.
 
-### 12. Which PowerPoint slides changed?
+## 20. Are metrics consistent and reproducible?
 
-Physical slides 8–16 cover updated screening, staged search, selection/parameters, learning curves, depth/leaf curves, three-model results, confusion matrices, targets and the unsuccessful outcome. Physical slides 2–7 retain the project/dataset/EDA foundations with current wording. Slides 17–18 provide acknowledgment/sources and questions. Physical slide 1 remains hidden template guidance. The final deck has 17 visible slides.
+All aggregate metrics reconcile with saved fold records. Dataset and split hashes, environment pins, exact settings, historical reproduction checks and execution records are supplied. Final document/presentation consistency is separately checked before publication; other environments may introduce small numerical differences.
 
-### 13. Which script sections changed?
+## Exact reference parameters
 
-Speaking sections for physical slides 8–16 explain the new procedure and measured outcome, including the nearly missed cutoff and remaining overfitting. Sections 2–7 retain the data/EDA explanation. Sections 17–18 and practice questions match the final deck. Speaker assignments are suggestions, not claims about individual project contributions.
+### Original Random Forest
 
-## Scope and limitations
+```json
+{
+  "bootstrap": true,
+  "ccp_alpha": 0.0,
+  "class_weight": null,
+  "criterion": "gini",
+  "max_depth": null,
+  "max_features": "sqrt",
+  "max_leaf_nodes": null,
+  "max_samples": null,
+  "min_impurity_decrease": 0.0,
+  "min_samples_leaf": 1,
+  "min_samples_split": 2,
+  "min_weight_fraction_leaf": 0.0,
+  "monotonic_cst": null,
+  "n_estimators": 100,
+  "n_jobs": null,
+  "oob_score": false,
+  "random_state": 42,
+  "verbose": 0,
+  "warm_start": false
+}
+```
 
-The test partition was examined in earlier revisions. It was excluded from this search, but remains a reused development test rather than a fresh independent holdout. The same training data informed screening and final selection, so ten-fold CV is a selection estimate and may be optimistic. Fold standard deviations are descriptive, not confidence intervals. Related sessions may cross the split because session identifiers are unavailable. Removing conflicting rows changes the evaluated population. Historical traffic may differ from current networks. This bounded search cannot exclude better untested configurations. A frozen model evaluated on independent new captures would give stronger evidence.
+### RF-206
 
-Search-stage counts exclude controls, full-training refits and diagnostic curve fits. The complete broad table, shortlist, ten-fold table and curve values are supplied as CSV files for inspection, not as inputs to the notebook. The source protocol and selection audit were checked before releasing the final test phase.
+```json
+{
+  "bootstrap": true,
+  "ccp_alpha": 0.0,
+  "class_weight": null,
+  "criterion": "entropy",
+  "max_depth": 14,
+  "max_features": 5,
+  "max_leaf_nodes": null,
+  "max_samples": 0.7,
+  "min_impurity_decrease": 0.0,
+  "min_samples_leaf": 4,
+  "min_samples_split": 10,
+  "min_weight_fraction_leaf": 0.0,
+  "monotonic_cst": null,
+  "n_estimators": 200,
+  "n_jobs": null,
+  "oob_score": false,
+  "random_state": 42,
+  "verbose": 0,
+  "warm_start": false
+}
+```
+
+### RF-210
+
+```json
+{
+  "bootstrap": true,
+  "ccp_alpha": 0.0,
+  "class_weight": null,
+  "criterion": "entropy",
+  "max_depth": 14,
+  "max_features": 5,
+  "max_leaf_nodes": null,
+  "max_samples": 0.7,
+  "min_impurity_decrease": 0.0,
+  "min_samples_leaf": 4,
+  "min_samples_split": 20,
+  "min_weight_fraction_leaf": 0.0,
+  "monotonic_cst": null,
+  "n_estimators": 500,
+  "n_jobs": null,
+  "oob_score": false,
+  "random_state": 42,
+  "verbose": 0,
+  "warm_start": false
+}
+```
+
+## Final comparison
+
+| Model | Full-training accuracy | Full-training F1 | 10-fold validation F1 | Fold SD | Paired F1 gap |
+| --- | --- | --- | --- | --- | --- |
+| Majority baseline (DummyClassifier) | 51.84% | 0.6828 | 0.6828 | 0.0003 | 0.0000 |
+| Linear classifier (SGDClassifier) | 58.93% | 0.6420 | 0.6369 | 0.0326 | -0.0008 |
+| Original RF | 99.99% | 0.9999 | 0.9016 | 0.0072 | 0.0984 |
+| Previous tuned RF | 96.73% | 0.9688 | 0.8965 | 0.0090 | 0.0733 |
+| RF-206 | 93.76% | 0.9406 | 0.8938 | 0.0087 | 0.0467 |
+| RF-210 | 92.57% | 0.9292 | 0.8904 | 0.0075 | 0.0378 |
+| Recommended tuned RF (RF-206) | 93.76% | 0.9406 | 0.8938 | 0.0087 | 0.0467 |
+
+| Model | Validation accuracy | Validation VPN precision | Validation VPN recall | Mean fold-training F1 |
+| --- | --- | --- | --- | --- |
+| Majority baseline (DummyClassifier) | 51.84% | 51.84% | 100.00% | 0.6828 |
+| Linear classifier (SGDClassifier) | 59.22% | 59.07% | 69.39% | 0.6361 |
+| Original RF | 89.72% | 89.47% | 90.88% | 1.0000 |
+| Previous tuned RF | 89.08% | 88.12% | 91.26% | 0.9699 |
+| RF-206 | 88.78% | 87.72% | 91.12% | 0.9405 |
+| RF-210 | 88.42% | 87.36% | 90.81% | 0.9282 |
+| Recommended tuned RF (RF-206) | 88.78% | 87.72% | 91.12% | 0.9405 |
+
+## Historical preservation
+
+The earlier 64-setting searches, 203-setting five-fold search and 285-setting three-fold search with 20 ten-fold finalists remain retained. The historical 0.005 rule selected Original RF. The advanced protocol was written before the new local fits but after those earlier findings; criterion C therefore remains post-hoc exploratory.
+
+## Revised notebook sections
+
+The notebook has twelve parts: introduction and dataset; preprocessing; EDA; initial algorithms; overfitting; RF tuning; advanced CV; selection sensitivity; learning and validation curves; recommendation; limitations; and conclusion. It replaces a new test-evaluation phase with an explicitly historical score panel. No new test scores are generated.
+
+The report, slides and script explain the same result, include the three original algorithms, and distinguish numerical F1 loss from the practical reduction in the fit gap. Cross-artifact verification is recorded separately from the scientific outputs.
