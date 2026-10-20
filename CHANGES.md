@@ -1,6 +1,45 @@
-# Final advanced revision record
+# Final frozen model evaluation update
 
-The final analysis preserves prior experiments and changes the recommended practical trade-off through an explicitly post-hoc rule. It does not claim a newly discovered higher-F1 model.
+RF-206 remains the selected Tuned Random Forest. This update adds the requested evaluation of the existing test partition, after selection, without changing hyperparameters, features, cleaning, split, seeds, CV results or the default classification rule. DummyClassifier and SGDClassifier remain in the original comparison.
+
+**Reused development-test evaluation — not an independent untouched test.**
+
+The full pipeline fits all 14,383 training rows, including median imputation fitted only there. Predictions cover the existing 3,596 test rows. Original RF is not newly evaluated; its scores and matrix are recovered from the preserved systematic experiment.
+
+| Metric | Original Random Forest | Tuned Random Forest (RF-206) |
+| --- | --- | --- |
+| Training Accuracy | 99.9930% | 93.7635% |
+| Training VPN F1 | 0.999932935 | 0.940615690 |
+| Mean 10-fold Validation VPN F1 | 0.901607369 | 0.893824214 |
+| Train–Validation F1 Gap | 0.098392631 | 0.046692095 |
+| Test Accuracy | 90.6563% | 89.3215% |
+| Test VPN precision | 90.0839% | 87.9098% |
+| Test VPN recall | 92.1137% | 92.0601% |
+| Test VPN F1 | 0.910875332 | 0.899371069 |
+| Test ROC-AUC | 0.967685402 | 0.963941807 |
+
+| Model | Actual class | Predicted NonVPN | Predicted VPN |
+| --- | --- | --- | --- |
+| Original RF (historical) | NonVPN | 1543 | 189 |
+| Original RF (historical) | VPN | 147 | 1717 |
+| Tuned Random Forest | NonVPN | 1496 | 236 |
+| Tuned Random Forest | VPN | 148 | 1716 |
+
+The matrix formulas and scikit-learn scores agree. ROC-AUC uses saved VPN probabilities. The lower accuracy/F1 relative to Original is consistent with the validation ordering. These results cannot establish unbiased independent generalization and cannot change RF-206.
+
+### Verification and files
+
+Only the notebook's historical-test display and final export code cells changed. The other 18 code cells, including data preparation, models, tuning candidates and cross-validation, retain identical source. The existing experiment is reproduced when Run all executes; no additional candidates are introduced.
+
+The report, presentation, speaking script, README and this change record use the same measured test values and the explicit reused-test disclosure. New exports are `reused_test_evaluation.json`, `rf206_reused_test_predictions.csv`, `reused_test_metrics.csv`, `final_train_validation_test_comparison.csv` and the confusion-matrix figure. Exact parameters and prior selection records remain available. All earlier output folders are preserved.
+
+### Protocol
+
+Selection stays frozen at RF-206 before and after prediction. Its probabilities are used only for ROC-AUC and its unmodified class predictions for the remaining metrics. There is no threshold search. Historical full-data conflicting-label cleaning and the previously inspected test partition remain disclosed limitations.
+
+## Preserved advanced optimization record
+
+The earlier advanced analysis preserved prior experiments and changes the recommended practical trade-off through an explicitly post-hoc rule. It does not claim a newly discovered higher-F1 model.
 
 ## 1. Were DummyClassifier and SGDClassifier preserved?
 
@@ -60,11 +99,11 @@ Identical-fold reproduction, stable 0.008693 fold F1 SD, smaller measured trees,
 
 ## 15. Were the target ranges achieved?
 
-No. Recommended training accuracy is 93.76% and ten-fold F1 is 0.8938. Independent test accuracy is unavailable. RF-210 reaches the training range alone but has lower F1; targets never drove selection.
+No. Recommended training accuracy is 93.76% and ten-fold F1 is 0.8938. Reused-test accuracy is 89.3215%; independent test accuracy remains unavailable. RF-210 reaches the training range alone but has lower F1; targets never drove selection.
 
 ## 16. Were test labels completely excluded from model selection?
 
-No test predictions, scores or held-out labels enter the new tuning or selection code. However, it would be inaccurate to claim the complete workflow never depended on held-out labels: preserved conflict cleaning used all source labels before splitting, and the old test had been viewed historically.
+Test predictions and scores do not enter the preserved tuning or selection code. The final update uses test labels only to score the already-frozen RF-206. However, it would be inaccurate to claim the complete workflow never depended on held-out labels: preserved conflict cleaning used all source labels before splitting, and the old test had been viewed historically.
 
 ## 17. What evaluation limitations remain?
 
@@ -76,7 +115,7 @@ New advanced notebook, report, presentation, script, README, CHANGES, figures, C
 
 ## 19. Did the entire notebook execute successfully?
 
-Yes. All 20 code cells in the 37-cell notebook executed, with actual outputs saved. The reference run took 947 seconds, about 16 minutes locally.
+Yes. All 20 code cells in the 37-cell notebook executed, with actual outputs saved. The complete final evaluation rerun took 964.2 seconds locally.
 
 ## 20. Are metrics consistent and reproducible?
 
@@ -190,6 +229,6 @@ The earlier 64-setting searches, 203-setting five-fold search and 285-setting th
 
 ## Revised notebook sections
 
-The notebook has twelve parts: introduction and dataset; preprocessing; EDA; initial algorithms; overfitting; RF tuning; advanced CV; selection sensitivity; learning and validation curves; recommendation; limitations; and conclusion. It replaces a new test-evaluation phase with an explicitly historical score panel. No new test scores are generated.
+The notebook has twelve parts: introduction and dataset; preprocessing; EDA; initial algorithms; overfitting; RF tuning; advanced CV; selection sensitivity; learning and validation curves; recommendation; limitations; and conclusion. The advanced revision originally displayed historical test scores only. The final evaluation update above replaces that panel with the frozen RF-206 evaluation and retains Original's historical results.
 
 The report, slides and script explain the same result, include the three original algorithms, and distinguish numerical F1 loss from the practical reduction in the fit gap. Cross-artifact verification is recorded separately from the scientific outputs.
