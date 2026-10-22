@@ -1,187 +1,165 @@
-# VPN and NonVPN Traffic Classification
+# Binary Classification of VPN and NonVPN Network Traffic Using Machine Learning
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/SAS2005/VPN-NonVPN-Classification-project/blob/main/TAM400_VPN_Notebook_Ready.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/SAS2005/VPN-NonVPN-Classification-project/blob/main/TAM400_VPN_Final_Clean.ipynb)
 
-TAM400 project by **Shucayb AHmed Said and Ayub Ali Barre, Group 17**.
+**Course:** TAM400 — Introduction to Applied Artificial Intelligence and Machine Learning  
+**University:** University West, Sweden  
+**Program:** Bachelor of Science in Computer Engineering (TGDTA)  
+**Authors:** Shucayb Ahmed Said and Ayub Ali Barre (Group 17)
 
-The project compares three classifiers for recorded network flows and investigates Random Forest regularization. **The recommended practical compromise is RF-206**, with 0.8938 mean ten-fold VPN F1 and a 0.0467 paired training–validation F1 gap. Original RF retains the highest observed validation F1, 0.9016, with a larger 0.0984 gap. The earlier local search did not find a configuration that improves on RF-206 under the disclosed practical rule. This recommendation exchanges some validation performance for simpler trees and a smaller fit gap; it does not establish higher predictive accuracy.
+---
+
+## Project Overview
+
+A **Virtual Private Network (VPN)** encrypts network traffic and routes it through an intermediate server to protect user privacy and secure communication, whereas **NonVPN** traffic travels directly across the network without an encrypted VPN tunnel. Because encryption hides packet payloads and port numbers, network management and cybersecurity systems cannot rely on deep packet inspection alone. Instead, machine learning models can classify traffic flows using statistical summaries of packet timing and data rates.
+
+In this project, we implement and evaluate a complete, reproducible machine learning workflow in Python and Google Colab to classify recorded network flows from the **ISCXVPN2016** benchmark dataset into two binary classes:
+- **NonVPN (`0`)** — standard network traffic without a VPN tunnel
+- **VPN (`1`)** — network traffic captured through an active VPN connection
 
-**Final evaluation update:** the already-selected RF-206 achieves **89.3215% reused-test accuracy** and **0.899371069 reused-test VPN F1**. Reused development-test evaluation — not an independent untouched test. This update preserves the model and all previous cross-validation results.
+---
 
-## Run everything in one Colab notebook
+## Repository Structure
 
-Open the Colab button, choose a fresh **CPU runtime**, then **Runtime > Run all**. No separate results notebook, saved model or external result file is needed. The first cell installs the pinned package versions if needed. If Colab requests a restart after installation, restart and run all again. An internet connection is required for installation and the pinned raw dataset download.
+```text
+├── TAM400_VPN_Final_Clean.ipynb              # Final executed Google Colab notebook (22 cells)
+├── README.md                                 # Project overview, results, and instructions
+├── requirements.txt                          # Pinned Python package versions
+├── report/
+│   ├── TAM400_Final_Project_Report.pdf       # Final 5-page academic report (PDF)
+│   └── TAM400_Final_Project_Report.docx      # Final academic report (Official TAM400 Word template)
+└── figures/
+    ├── figure_1.png                          # Training class distribution
+    ├── figure_2.png                          # Flow duration distribution (seconds)
+    ├── figure_3.png                          # 10-fold validation VPN F1 model comparison
+    ├── figure_4.png                          # Random Forest fold-by-fold training vs. validation F1
+    └── figure_5.png                          # Random Forest test confusion matrix
+```
 
-The notebook has **37 cells, including 20 code cells**. All 20 executed successfully in the complete rerun on 20 October 2026, taking about **16.1 minutes locally**. Colab timing will vary. Running all cells recomputes the unchanged training, screening, validation and curves, then the frozen reused-test evaluation and exports. All results are saved in `advanced_results/` in the runtime. Download that folder before the runtime expires if you want to keep the CSV and JSON files.
+### Completed Project Report
+- **PDF Report:** [`report/TAM400_Final_Project_Report.pdf`](report/TAM400_Final_Project_Report.pdf)
+- **Word Report (`.docx`):** [`report/TAM400_Final_Project_Report.docx`](report/TAM400_Final_Project_Report.docx)
 
-The local download is named `TAM400_VPN_Advanced_Colab.ipynb`; GitHub retains the established filename `TAM400_VPN_Notebook_Ready.ipynb` for the Colab link. Earlier Drive copies do not update automatically.
+---
 
-Reference environment: Python 3.12.14, scikit-learn 1.6.1, pandas 2.2.3, NumPy 2.1.3, matplotlib 3.10.7 and SciPy 1.14.1. Model seeds and shuffled stratified split seeds are 42. Estimator dictionaries retain `n_jobs=None`; CV clones use one estimator job and two parallel fold jobs. This affects scheduling, not the model definition.
+## Dataset and Data Preprocessing
 
-## Dataset and fixed preprocessing
+We use the 15-second flow dataset (`15s.arff`) from the **ISCXVPN2016** benchmark created by the Canadian Institute for Cybersecurity at the University of New Brunswick. The notebook downloads the pinned ARFF dataset and verifies its SHA-256 checksum (`8b12e8c0cd49f56af28cdaa7c2aa7795ee24de0b1bedf638280e00404f7c1563`).
 
-The source is [ISCXVPN2016 from the Canadian Institute for Cybersecurity at UNB](https://www.unb.ca/cic/datasets/vpn.html), described by [Draper-Gil et al.](https://doi.org/10.5220/0005740704070414). This project uses the same [pinned public ARFF mirror](https://github.com/shafwanur/thd-ss25-ml-project/blob/b4488cf1022157a319d9ccdfa36f86cb940e2b80/data/15s.arff) as earlier revisions. The mirror has not been independently matched against the official archive. Its SHA-256 verifies unchanged input bytes:
+### Selected Features (9 Numerical Flow Attributes)
+1. `duration` — total duration of the flow (stored in microseconds in the raw file; converted to seconds for visualization)
+2. `flowPktsPerSecond` — flow packets per second
+3. `flowBytesPerSecond` — flow bytes per second
+4. `min_flowiat` — minimum packet inter-arrival time
+5. `max_flowiat` — maximum packet inter-arrival time
+6. `mean_flowiat` — mean packet inter-arrival time
+7. `std_flowiat` — standard deviation of packet inter-arrival times
+8. `mean_active` — mean time the flow was active before going idle
+9. `mean_idle` — mean time the flow remained idle between active periods
 
-`8b12e8c0cd49f56af28cdaa7c2aa7795ee24de0b1bedf638280e00404f7c1563`
+### Cleaning and Splitting Workflow
+1. **Invalid negative values (`1,240` cells):** Physically impossible negative durations and traffic rates are replaced with `NaN` and imputed using the training median (`SimpleImputer(strategy="median")`) inside each model's scikit-learn `Pipeline`.
+2. **Exact duplicate rows (`725` rows removed):** Repeated rows with identical feature values and class labels are removed.
+3. **Conflicting-label rows (`54` rows removed):** Rows with identical feature values but opposite class labels (`VPN` vs. `NonVPN`) are removed, leaving **17,979 clean observations**.
+4. **Stratified 80/20 Train/Test Split (`random_state=42`):**
+   - **Training set (80%):** `14,383` flows (`6,927` NonVPN, `7,456` VPN — `51.84%` VPN)
+   - **Test set (20%):** `3,596` flows (`1,732` NonVPN, `1,864` VPN — `51.84%` VPN)
 
-NonVPN is 0 and VPN is 1. The nine unchanged inputs are `duration`, `flowPktsPerSecond`, `flowBytesPerSecond`, `min_flowiat`, `max_flowiat`, `mean_flowiat`, `std_flowiat`, `mean_active` and `mean_idle`.
+| Training Class Distribution | Flow Duration Distribution (Seconds) |
+| :---: | :---: |
+| ![Training Class Distribution](figures/figure_1.png) | ![Flow Duration Distribution](figures/figure_2.png) |
 
-The 18,758 raw rows contain 1,240 negative feature cells, which become missing values. Cleaning removes 725 repeated input/label rows, then 54 conflicting-label rows, leaving **17,979 rows**. A stratified 80/20 split with seed 42 retains **14,383 training rows and 3,596 held-out rows**, with the original indices unchanged. The training partition contains 6,927 NonVPN and 7,456 VPN flows. There are no identical feature vectors across the retained split.
+---
 
-**Cleaning limitation:** conflicting-label removal happens before splitting and uses labels from the full source. Therefore, the dataset construction is label-dependent. Learned median imputation and SGD scaling are fitted exclusively within each CV training fold, with executed assertions checking their fitted parameters. These pipelines do not undo the earlier population filtering.
+## Classification Models
 
-Duration is stored in microseconds. Plots convert it to seconds using the [original flow-meter calculation](https://github.com/ahlashkari/ISCXFlowMeter/blob/f3287486f114350b0b79dcfcf1050bc6a85190cf/src/main/java/iscx/cs/unb/ca/ifm/data/BasicFlow.java#L168-L172). The full histogram and 0–15 second zoom keep all 281 longer training flows in the analysis. Low Pearson correlations describe weak linear associations, not absence of useful nonlinear information.
+We compare three supervised classifiers wrapped in scikit-learn `Pipeline` objects so that preprocessing is fitted strictly on the training folds:
 
-## Part A: Three classification algorithms
+1. **DummyClassifier (`strategy="most_frequent"`):** A simple baseline that always predicts the majority class (`VPN`). Used to verify whether machine learning models outperform a basic prediction strategy.
+2. **SGDClassifier (`random_state=42`):** A linear classifier trained with stochastic gradient descent and `StandardScaler` standardization. Used to compare a simple linear decision boundary against a non-linear tree ensemble.
+3. **Random Forest (`RandomForestClassifier`):** Our selected non-linear ensemble of decision trees using regularized hyperparameters chosen during earlier training-only tuning:
+   - `n_estimators=200`, `criterion="entropy"`, `max_depth=14`, `min_samples_leaf=4`, `min_samples_split=10`, `max_features=5`, `max_samples=0.7`, `bootstrap=True`, `random_state=42`
 
-- **DummyClassifier:** `strategy="most_frequent"`, with median imputation. It always predicts the majority class, VPN. Its recall is 1.0 but precision is only about 0.5184, so recall alone is misleading.
-- **SGDClassifier:** the unchanged `SGDClassifier(random_state=42)` definition with default hinge loss, preceded by fold-fitted median imputation and StandardScaler. Its 0.6369 F1 is below the majority baseline in this comparison. This specific linear model is not competitive here; the result does not establish that all linear methods fail.
-- **Original Random Forest:** `RandomForestClassifier(random_state=42)` after median imputation. It supplies the nonlinear reference configuration.
+---
 
-Every value in the following comparison uses the same ten shuffled stratified folds. Full-training scores come from separate fits on all 14,383 training rows. The paired gap is the mean of **fold-training VPN F1 minus that fold's validation VPN F1**. It never subtracts accuracy from F1. The recommended row repeats RF-206 intentionally.
+## Results and Model Comparison
 
-| Model | Full-training accuracy | Full-training F1 | 10-fold validation F1 | Fold SD | Paired F1 gap |
-| --- | --- | --- | --- | --- | --- |
-| Majority baseline (DummyClassifier) | 51.84% | 0.6828 | 0.6828 | 0.0003 | 0.0000 |
-| Linear classifier (SGDClassifier) | 58.93% | 0.6420 | 0.6369 | 0.0326 | -0.0008 |
-| Original RF | 99.99% | 0.9999 | 0.9016 | 0.0072 | 0.0984 |
-| Previous tuned RF | 96.73% | 0.9688 | 0.8965 | 0.0090 | 0.0733 |
-| RF-206 | 93.76% | 0.9406 | 0.8938 | 0.0087 | 0.0467 |
-| RF-210 | 92.57% | 0.9292 | 0.8904 | 0.0075 | 0.0378 |
-| Recommended tuned RF (RF-206) | 93.76% | 0.9406 | 0.8938 | 0.0087 | 0.0467 |
+### 1. Ten-Fold Stratified Cross-Validation (Training Partition, `n = 14,383`)
 
-| Model | Validation accuracy | Validation VPN precision | Validation VPN recall | Mean fold-training F1 |
-| --- | --- | --- | --- | --- |
-| Majority baseline (DummyClassifier) | 51.84% | 51.84% | 100.00% | 0.6828 |
-| Linear classifier (SGDClassifier) | 59.22% | 59.07% | 69.39% | 0.6361 |
-| Original RF | 89.72% | 89.47% | 90.88% | 1.0000 |
-| Previous tuned RF | 89.08% | 88.12% | 91.26% | 0.9699 |
-| RF-206 | 88.78% | 87.72% | 91.12% | 0.9405 |
-| RF-210 | 88.42% | 87.36% | 90.81% | 0.9282 |
-| Recommended tuned RF (RF-206) | 88.78% | 87.72% | 91.12% | 0.9405 |
+| Classifier | Training Accuracy | Training VPN F1 | Validation Accuracy | Validation VPN Precision | Validation VPN Recall | Mean Validation VPN F1 (±SD) | Paired Train–Val F1 Gap |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **DummyClassifier** | 51.84% | 0.6828 | 51.84% | 51.84% | 100.00% | 0.6828 (±0.0003) | 0.0000 |
+| **SGDClassifier** | 58.93% | 0.6420 | 59.22% | 59.07% | 69.39% | 0.6369 (±0.0326) | -0.0008 |
+| **Random Forest** | **93.81%** | **0.9410** | **88.81%** | **87.76%** | **91.12%** | **0.8941 (±0.0085)** | **0.0466** |
 
-## Part B: Previously completed Random Forest optimization
+| Three-Classifier Validation VPN F1 Comparison | Random Forest Fold-by-Fold Training vs. Validation F1 |
+| :---: | :---: |
+| ![Three-Classifier Comparison](figures/figure_3.png) | ![Random Forest Fold Comparison](figures/figure_4.png) |
 
-All four historical reference forests reproduced their saved ten-fold metrics and fold F1 values to numerical tolerance **before any new configuration was fitted**.
+### 2. Final Random Forest Evaluation (Reused Development-Test Set, `n = 3,596`)
 
-| Parameter | Original RF | Previous tuned RF | RF-206 and recommended | RF-210 |
-| --- | --- | --- | --- | --- |
-| `n_estimators` | `100` | `200` | `200` | `500` |
-| `criterion` | `gini` | `gini` | `entropy` | `entropy` |
-| `max_depth` | `None` | `16` | `14` | `14` |
-| `min_samples_leaf` | `1` | `2` | `4` | `4` |
-| `min_samples_split` | `2` | `2` | `10` | `20` |
-| `max_features` | `sqrt` | `6` | `5` | `5` |
-| `max_samples` | `None` | `0.75` | `0.7` | `0.7` |
+| Metric | Value (Rounded) | Exact Notebook Output |
+| :--- | :---: | :---: |
+| **Training Accuracy** | 93.81% | `93.8052%` |
+| **Training VPN F1** | 0.9410 | `0.940966` |
+| **Mean 10-Fold Validation VPN F1** | 0.8941 (±0.0085) | `0.894053` |
+| **Paired Training–Validation F1 Gap** | **0.0466** | `0.046553` |
+| **Test Accuracy (reused development-test)** | **89.29%** | `89.2937%` (`3,211 / 3,596`) |
+| **Test VPN Precision** | 87.90% | `0.879036` |
+| **Test VPN Recall** | 92.01% | `0.920064` |
+| **Test VPN F1** | **0.8991** | `0.899083` |
+| **Test ROC-AUC** | **0.9640** | `0.964009` |
+| **Confusion Matrix (`labels=[0, 1]`)** | `[[1496, 236], [149, 1715]]` | `TN=1,496, FP=236, FN=149, TP=1,715` |
 
-Common forest settings are `bootstrap=True`, `random_state=42`, `class_weight=None`, `max_leaf_nodes=None`, `min_impurity_decrease=0.0`, `min_weight_fraction_leaf=0.0`, `ccp_alpha=0.0`, `monotonic_cst=None`, `n_jobs=None`, `oob_score=False`, `verbose=0` and `warm_start=False`. Full parameter dictionaries for every candidate are exported to `model_parameters.json`.
+![Random Forest Confusion Matrix](figures/figure_5.png)
 
-RF-206 restricts depth, minimum leaf size, split size and the bootstrap draw compared with Original RF. It considers **five features per split versus Original's three** under `sqrt` for nine features. Increased feature sampling, entropy and 200 trees cannot simply be called stronger regularization. The local one-parameter experiments measure effects conditional on the other RF-206 settings. RF-210 changes both tree count and split size relative to RF-206, so that comparison alone cannot isolate their effects.
+---
 
-The preserved local search contains **23 unique configurations**, including RF-206 and 22 one-parameter perturbations. **20 configurations are genuinely new** relative to retained historical grids; RF-206 and the split minima 20 and 30 already appeared there. All 23 are recomputed for a self-contained experiment.
+## Technologies Used
 
-| Parameter varied | Values, with all other settings fixed at RF-206 |
-| --- | --- |
-| `max_depth` | 10, 12, 14, 16, 18 |
-| `min_samples_leaf` | 2, 3, 4, 5, 6, 8 |
-| `min_samples_split` | 8, 10, 12, 16, 20, 30 |
-| `max_features` | 3, 4, 5, 6, 7 |
-| `max_samples` | 0.5, 0.6, 0.7, 0.8, 0.9 |
+- **Language & Runtime:** Python 3.13.16 (Google Colab)
+- **Machine Learning:** `scikit-learn 1.6.1`
+- **Data Manipulation:** `pandas 2.2.3`, `numpy 2.1.3`, `scipy 1.14.1`
+- **Visualization:** `matplotlib 3.10.7`
 
-Three-fold screening uses `StratifiedKFold(n_splits=3, shuffle=True, random_state=42)`. The shortlist combines four high-F1 candidates with four near-best candidates with smaller gaps, deduplicating and filling by F1 to retain eight. The near-best allowance is the explicitly exploratory 0.010 rule with fold SD no greater than 0.015. Six shortlisted configurations are genuinely new; two were screened historically.
+---
 
-These eight join Original RF, Previous Tuned RF, RF-206 and RF-210 in **12 forest comparisons**, plus Dummy and SGD, giving **14 ten-fold models**. All use `StratifiedKFold(n_splits=10, shuffle=True, random_state=42)`. The six reference results are reused from their reproduction phase. This search entails 69 screening CV fits and 140 ten-fold CV fits, plus separate full-training fits and diagnostics.
+## How to Run the Notebook
 
-## Selection sensitivity and recommendation
+### Option 1 — Run in Google Colab (Recommended)
+1. Click the **[Open in Colab](https://colab.research.google.com/github/SAS2005/VPN-NonVPN-Classification-project/blob/main/TAM400_VPN_Final_Clean.ipynb)** badge at the top of this README.
+2. In the top menu, select **Runtime -> Run all**.
+3. The first code cell checks package versions and automatically downloads and verifies the `15s.arff` dataset.
 
-| Criterion | Rule | Chosen model |
-| --- | --- | --- |
-| A | Highest mean ten-fold VPN F1 | Original RF |
-| B | Historical 0.005 F1 allowance, then smaller gap | Original RF |
-| C | Post-hoc exploratory 0.010 allowance, SD ≤ 0.015, then smaller gap among eligible Pareto candidates | RF-206 |
-| D | Show the F1/gap Pareto frontier and measured complexity | Several trade-offs; no automatic winner |
+### Option 2 — Run Locally
+```bash
+git clone https://github.com/SAS2005/VPN-NonVPN-Classification-project.git
+cd VPN-NonVPN-Classification-project
+pip install -r requirements.txt
+jupyter notebook TAM400_VPN_Final_Clean.ipynb
+```
 
-The earlier 0.005 rule remains unchanged and still selects Original RF. Its cutoff is 0.896607; Previous Tuned RF is just below it at 0.896546. The current 0.010 alternative is **post-hoc and exploratory**, informed by previous experiments. It was recorded before this local pass, but it was not the historical selection rule. The 0.015 SD cap is a practical guard, not a confidence threshold.
+---
 
-Under criterion C, **RF-206** is the smallest-gap eligible stable choice. The unrestricted smallest forest gap belongs to Local-14 (split minimum 30), at 0.0332, but its validation F1 falls to 0.8861 and fails the 0.010 allowance. RF-210 also falls outside that allowance. Thus minimizing the gap alone would choose a less accurate model.
+## Project Limitations
 
-The highest-F1 genuinely new finalist is **Local-04**, which changes depth from 14 to 18. It reaches **0.8959 F1**, **94.93% full-training accuracy** and a **0.0562 gap**. It improves on RF-206's F1 but increases its gap, and does not beat Original's F1. No new finalist dominates RF-206 on both F1 and gap.
+1. **Moderate overfitting remains:** Although hyperparameter regularization reduced the paired training–validation F1 gap by 52.7% (from `0.0984` in an unregularized default Random Forest down to `0.0466`), the model still scores higher on training data (`0.9410` F1) than on validation data (`0.8941` F1).
+2. **Reused development-test partition:** Because the 20% test partition (`3,596` flows) was inspected during earlier project development, test metrics represent a reused development-test evaluation rather than an untouched independent benchmark.
+3. **Pre-split conflict removal:** Removing the `54` conflicting-label rows prior to splitting used labels from the full dataset.
+4. **No session identifiers:** The ARFF dataset does not include capture or session IDs, so flows from the same network session may appear in both training and validation splits.
+5. **Historical dataset:** ISCXVPN2016 was recorded in 2016 and may not fully represent modern VPN protocols and current traffic patterns.
+6. **Regularization trade-off:** Constraining tree growth produces simpler trees and a smaller fit gap, but trades a small amount of validation and test F1 compared with an unregularized forest.
 
-RF-206 reduces the paired gap by **52.5%**, from 0.0984 to 0.0467. Mean leaves per tree fall from about **1,147 to 372** in CV fits. Because RF-206 has twice as many trees, total mean forest node count falls by about **35.1%**, not the per-tree percentage. The recommendation is a practical preference for this measured trade-off.
+---
 
-The paired RF-206 minus Original fold F1 difference averages **−0.007783**, with descriptive SD **0.005937**, range **−0.019630 to +0.003266**, and RF-206 higher in **1 of 10 folds**. Original's observed advantage is therefore fairly consistent. Overlapping model SDs do not erase this loss. Folds share training data and are not independent replicate datasets, so these summaries do not establish statistical significance or equivalence.
+## Acknowledgment of Generative AI Assistance
 
-## Conditional nested check and diagnostic plots
+In accordance with TAM400 course guidelines, the authors acknowledge that generative AI tools (ChatGPT, OpenAI Codex, and Google Antigravity/Gemini) were used to assist with Python code cleanup, debugging, local execution, visualization formatting, and drafting and editing of the notebook and report explanations. The student authors are responsible for reviewing the code and numerical results, verifying the notebook execution, and understanding and presenting the submitted work.
 
-A three-outer-fold by three-inner-fold check evaluates all **26 fixed forest settings** within each outer training subset: the 23 local settings plus Original, Previous Tuned and RF-210. It uses 234 inner CV fits and three outer refits. Selection stays inside each outer training subset, without reusing the global finalist shortlist. Mean outer F1 is **0.884643**, descriptive SD **0.000542**, with scores **0.884478, 0.885374 and 0.884078**.
+---
 
-This checks the local three-fold selection procedure. It is **conditional on the RF-206 center chosen through past experiments**, the fixed family and global cleaning. It does not estimate the complete historical or three-to-ten-fold workflow without bias. It cannot replace a fresh independent test, and it cannot change the frozen recommendation. See [scikit-learn's nested-CV explanation](https://scikit-learn.org/stable/auto_examples/model_selection/plot_nested_cross_validation_iris.html).
+## References
 
-Learning curves compare Original RF, RF-206 and Local-04 at five training sizes. RF-206 validation F1 rises from 0.8401 to 0.8873 as training rows per fit increase from 1,917 to 9,588, while its gap remains 0.0538 at the largest three-fold curve point. Original reaches 0.8943 with a 0.1056 gap. These diagnostics support further data collection but do not guarantee its effect on new capture sessions.
-
-Depth, leaf and split validation curves reuse the controlled screening fits. At depth 10, fold training/validation F1 are 0.9092/0.8729, compared with 0.9409/0.8864 at depth 14. Larger leaf or split minima also eventually lower both scores. These are signs of relative underfitting from excessive restriction. Three-fold curve values must not be presented as ten-fold finalist scores.
-
-The notebook also includes class counts, duration and Pearson plots, model and gap comparisons, the F1/gap Pareto frontier, validation versus measured tree complexity, ten-fold impurity importance and held-out-fold permutation importance. Importance error bars show descriptive fold variation, not confidence intervals. Correlated inputs may substitute for one another, so these figures are not causal explanations and do not justify dropping features after selection. See [permutation importance guidance](https://scikit-learn.org/stable/modules/permutation_importance.html).
-
-## Frozen model evaluation on the reused test partition
-
-**Reused development-test evaluation — not an independent untouched test.**
-
-RF-206 was selected before this final evaluation update. It retains 200 trees, entropy, depth 14, leaf minimum 4, split minimum 10, five features per split, bootstrap fraction 0.7, `bootstrap=True` and seed 42. No new hyperparameter candidates, threshold adjustments or test-based model selection were introduced. The full notebook rerun reproduces the existing training-only experiments, then fits this frozen pipeline on all 14,383 training rows. Median imputation is fitted only on those training rows. Test predictions use the classifier's unchanged `predict` method.
-
-| Metric | Original Random Forest | Tuned Random Forest (RF-206) |
-| --- | --- | --- |
-| Training Accuracy | 99.9930% | 93.7635% |
-| Training VPN F1 | 0.999932935 | 0.940615690 |
-| Mean 10-fold Validation VPN F1 | 0.901607369 | 0.893824214 |
-| Train–Validation F1 Gap | 0.098392631 | 0.046692095 |
-| Test Accuracy | 90.6563% | 89.3215% |
-| Test VPN precision | 90.0839% | 87.9098% |
-| Test VPN recall | 92.1137% | 92.0601% |
-| Test VPN F1 | 0.910875332 | 0.899371069 |
-| Test ROC-AUC | 0.967685402 | 0.963941807 |
-
-Original RF's test results remain historical. Tuned Random Forest's measurements use the same 3,596-row partition. The gap is the mean paired fold-training minus fold-validation F1; full-training F1 is a separate measurement.
-
-### Confusion matrices
-
-Rows are actual classes; columns are predictions. VPN is positive class 1.
-
-| Model | Actual class | Predicted NonVPN | Predicted VPN |
-| --- | --- | --- | --- |
-| Original RF (historical) | NonVPN | 1543 | 189 |
-| Original RF (historical) | VPN | 147 | 1717 |
-| Tuned Random Forest | NonVPN | 1496 | 236 |
-| Tuned Random Forest | VPN | 148 | 1716 |
-
-For RF-206, TN=1496, FP=236, FN=148 and TP=1716. We verified:
-
-- Accuracy = (1496 + 1716) / 3596 = **0.8932146829810901**.
-- VPN precision = 1716 / (1716 + 236) = **0.8790983606557377**.
-- VPN recall = 1716 / (1716 + 148) = **0.9206008583690987**.
-- VPN F1 = 3432 / (3432 + 236 + 148) = **0.8993710691823900**.
-- ROC-AUC = **0.9639418073328113**, computed from VPN probabilities with `roc_auc_score`, not from predicted class labels.
-
-The four class-label metrics match scikit-learn's accuracy, precision, recall and F1 functions, with `pos_label=1` for VPN. The confusion matrix uses `labels=[0,1]`. ROC-AUC cannot be reconstructed from the confusion matrix alone.
-
-RF-206's reused-test F1 (0.8994) is broadly consistent with its mean ten-fold F1 (0.8938). Original RF retains higher accuracy and F1 on this partition, as in validation. RF-206 makes 47 additional false VPN alarms and one additional missed VPN flow. Its smaller training–validation gap therefore remains a practical trade-off, not proof of higher predictive accuracy. RF-206 remains frozen regardless of these outcomes.
-
-The training, validation and reused-test targets were not reached. A fresh independent test estimate remains unavailable. This already inspected partition cannot provide an unbiased independent performance estimate.
-
-## Limitations and next steps
-
-Repeated tuning uses the same training data, so ten-fold finalist results are selected comparison estimates. The conditional nested check cannot undo earlier adaptive choices. Global conflicting-label cleaning uses labels before splitting. Capture/session IDs are absent, so related-flow leakage cannot be excluded. After diagnostic median/IQR scaling, 3,872 training rows have a neighbor within distance 0.01, including 73 with a differently labelled nearest neighbor. The arbitrary threshold is a warning for investigation, not proof of shared sessions. No observations were removed for this diagnostic.
-
-Strong skew, extreme values, duration concentrations and zero-heavy activity features may reflect capture conditions. The data are historical, and the public mirror's provenance has not been independently validated against the official archive. The bounded local search cannot rule out better untested configurations. **Overfitting is reduced in the observed gap, not eliminated.**
-
-No independent compatible dataset was obtained and validated. [CICDarknet2020 reuses ISCXVPN2016](https://www.unb.ca/cic/datasets/darknet2020.html), so it cannot supply independent VPN evidence. [MIT VNAT](https://www.ll.mit.edu/r-d/datasets/vpnnonvpn-network-application-traffic-dataset-vnat) is a possible separate source, but its supplied feature file uses a different representation. Reproducing the nine features, checking units and evaluating frozen models on new, session-separated captures are future work.
-
-This is an offline experiment on measured flow summaries, not a detector of a computer's current VPN switch.
-
-## Deliverables and experiment tracking
-
-The complete local package contains the executed notebook, five-page report, PowerPoint, two-presenter speaking script, twelve figures, full CSV tables and JSON records. `CHANGES.md` answers the requested 20 audit questions. The notebook creates all result exports itself and never imports them.
-
-Key exports are `required_comparison.csv`, `finalist_comparison.csv`, `finalist_fold_scores.csv`, `oat_screening.csv`, `oat_screening_fold_scores.csv`, `model_parameters.json`, `selection_criteria.csv`, `paired_fold_differences.csv`, `pareto_candidates.csv`, `nested_outer_results.csv`, `nested_inner_fold_scores.csv`, `final_selection.json`, `results.json`, `reused_test_evaluation.json`, `rf206_reused_test_predictions.csv` and `final_train_validation_test_comparison.csv`. Earlier experiments remain preserved in the local history folders and repository history. Their original 0.005 selection outcome has not been rewritten.
-
-OpenAI Codex supported explanations, research, code generation, debugging, local execution, figures and drafts. The students are responsible for reviewing and understanding the work, and for describing individual contributions accurately.
+1. G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A. Ghorbani, "Characterization of Encrypted and VPN Traffic Using Time-Related Features," in *Proc. 2nd Int. Conf. Information Systems Security and Privacy (ICISSP)*, Rome, Italy, 2016, pp. 407–414, doi: 10.5220/0005740704070414.
+2. Canadian Institute for Cybersecurity (CIC), "VPN-nonVPN dataset (ISCXVPN2016)," University of New Brunswick. [Online]. Available: https://www.unb.ca/cic/datasets/vpn.html
+3. F. Pedregosa *et al.*, "Scikit-learn: Machine Learning in Python," *Journal of Machine Learning Research*, vol. 12, pp. 2825–2830, 2011. [Online]. Available: https://scikit-learn.org/stable/
