@@ -1,6 +1,6 @@
 # Binary Classification of VPN and NonVPN Network Traffic Using Machine Learning
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/SAS2005/VPN-NonVPN-Classification-project/blob/main/TAM400_VPN_Final_Clean.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/SAS2005/VPN-NonVPN-Classification-project/blob/main/TAM400_VPN_AND_NONVPN_Classification.ipynb)
 
 **Course:** TAM400 — Introduction to Applied Artificial Intelligence and Machine Learning  
 **University:** University West, Sweden  
@@ -22,15 +22,15 @@ In this project, we implement and evaluate a complete, reproducible machine lear
 ## Repository Structure
 
 ```text
-├── TAM400_VPN_Final_Clean.ipynb              # Final executed Google Colab notebook (22 cells)
-├── README.md                                 # Project overview, results, and instructions
-├── requirements.txt                          # Pinned Python package versions
+├── TAM400_VPN_AND_NONVPN_Classification.ipynb  # Final executed Google Colab notebook (22 cells)
+├── README.md                                   # Project overview, results, and instructions
+├── requirements.txt                            # Pinned Python package versions
 └── figures/
-    ├── figure_1.png                          # Training class distribution
-    ├── figure_2.png                          # Flow duration distribution (seconds)
-    ├── figure_3.png                          # 10-fold validation VPN F1 model comparison
-    ├── figure_4.png                          # Random Forest fold-by-fold training vs. validation F1
-    └── figure_5.png                          # Random Forest test confusion matrix
+    ├── figure_1.png                            # Training class distribution
+    ├── figure_2.png                            # Flow duration distribution (seconds)
+    ├── figure_3.png                            # 10-fold validation VPN F1 model comparison
+    ├── figure_4.png                            # Random Forest fold-by-fold training vs. validation F1
+    └── figure_5.png                            # Random Forest test confusion matrix
 ```
 
 ---
@@ -120,7 +120,7 @@ We compare three supervised classifiers wrapped in scikit-learn `Pipeline` objec
 ## How to Run the Notebook
 
 ### Option 1 — Run in Google Colab (Recommended)
-1. Click the **[Open in Colab](https://colab.research.google.com/github/SAS2005/VPN-NonVPN-Classification-project/blob/main/TAM400_VPN_Final_Clean.ipynb)** badge at the top of this README.
+1. Click the **[Open in Colab](https://colab.research.google.com/github/SAS2005/VPN-NonVPN-Classification-project/blob/main/TAM400_VPN_AND_NONVPN_Classification.ipynb)** badge at the top of this README.
 2. In the top menu, select **Runtime -> Run all**.
 3. The first code cell checks package versions and automatically downloads and verifies the `15s.arff` dataset.
 
@@ -129,7 +129,7 @@ We compare three supervised classifiers wrapped in scikit-learn `Pipeline` objec
 git clone https://github.com/SAS2005/VPN-NonVPN-Classification-project.git
 cd VPN-NonVPN-Classification-project
 pip install -r requirements.txt
-jupyter notebook TAM400_VPN_Final_Clean.ipynb
+jupyter notebook TAM400_VPN_AND_NONVPN_Classification.ipynb
 ```
 
 ---
