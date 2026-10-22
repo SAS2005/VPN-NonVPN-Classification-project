@@ -25,9 +25,6 @@ In this project, we implement and evaluate a complete, reproducible machine lear
 ├── TAM400_VPN_Final_Clean.ipynb              # Final executed Google Colab notebook (22 cells)
 ├── README.md                                 # Project overview, results, and instructions
 ├── requirements.txt                          # Pinned Python package versions
-├── report/
-│   ├── TAM400_Final_Project_Report.pdf       # Final 5-page academic report (PDF)
-│   └── TAM400_Final_Project_Report.docx      # Final academic report (Official TAM400 Word template)
 └── figures/
     ├── figure_1.png                          # Training class distribution
     ├── figure_2.png                          # Flow duration distribution (seconds)
@@ -35,10 +32,6 @@ In this project, we implement and evaluate a complete, reproducible machine lear
     ├── figure_4.png                          # Random Forest fold-by-fold training vs. validation F1
     └── figure_5.png                          # Random Forest test confusion matrix
 ```
-
-### Completed Project Report
-- **PDF Report:** [`report/TAM400_Final_Project_Report.pdf`](report/TAM400_Final_Project_Report.pdf)
-- **Word Report (`.docx`):** [`report/TAM400_Final_Project_Report.docx`](report/TAM400_Final_Project_Report.docx)
 
 ---
 
